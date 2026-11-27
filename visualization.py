@@ -141,10 +141,10 @@ def _resample_polyline(vertices: np.ndarray, count: int) -> np.ndarray:
 
 
 def demo(output_dir: str | Path | None = None) -> tuple[tuple[Figure, Axes], tuple[Figure, Axes]]:
-    """Build both plots from the agreed static map and clearly dummy data.
+    """Build and smoke-check both plots with clearly dummy static-map data.
 
     When output_dir is given, save the example figures there. The paths and
-    objective history are smoke-test placeholders, not optimizer results.
+    objective history are placeholders, not optimizer results.
     """
     scenario = {
         "name": "Static example (illustrative dummy paths)",
@@ -166,11 +166,16 @@ def demo(output_dir: str | Path | None = None) -> tuple[tuple[Figure, Axes], tup
     example_path = _resample_polyline(
         np.array([[1.0, 5.0], [5.0, 6.6], [9.0, 5.0]]), 22
     )
-    # Decreasing values are dummy points used to check the history plot.
+    # Decreasing values are dummy points used only to check the history plot.
     dummy_result = {"objective_history": [10.0, 8.2, 7.5, 7.1, 7.0]}
 
     path_plot = plot_path(scenario, example_path, initial_path=initial_path)
     history_plot = plot_objective_history(dummy_result)
+    assert len(path_plot[1].lines) == 2
+    assert path_plot[1].get_aspect() == 1.0
+    assert len(history_plot[1].lines) == 1
+    assert np.allclose(history_plot[1].lines[0].get_ydata(), dummy_result["objective_history"])
+
     if output_dir is not None:
         directory = Path(output_dir)
         directory.mkdir(parents=True, exist_ok=True)
@@ -181,4 +186,4 @@ def demo(output_dir: str | Path | None = None) -> tuple[tuple[Figure, Axes], tup
 
 if __name__ == "__main__":
     demo(output_dir="figures")
-    print("Saved illustrative dummy plots to figures/.")
+    print("Plot smoke checks passed; saved illustrative dummy plots to figures/.")
