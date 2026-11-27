@@ -19,7 +19,7 @@ def point_to_segment_distance(point, start, end):
 
 
 def validate_path(scenario, path, *, tolerance=1e-9):
-    """Report static feasibility and raw obstacle and boundary violations.
+    """Report static feasibility, constraint violations, and endpoint error.
 
     Clearance is measured from the robot's outer edge to the obstacle.
     With no obstacles, minimum clearance is infinity.
@@ -32,19 +32,27 @@ def validate_path(scenario, path, *, tolerance=1e-9):
     if not np.isfinite(tolerance) or tolerance < 0:
         raise ValueError("Feasibility tolerance must be finite and nonnegative.")
 
+    endpoints = np.asarray([scenario["start"], scenario["goal"]], dtype=float)
+    if endpoints.shape != (2, 2) or not np.isfinite(endpoints).all():
+        raise ValueError("Scenario start and goal must be finite 2D points.")
+    endpoint_error = float(np.max(np.abs(path[[0, -1]] - endpoints)))
+
     robot_radius = scenario["robot_radius"]
     safety_margin = scenario["safety_margin"]
-    minimum_clearance = min(
-        (
-            point_to_segment_distance(centre, start, end) - radius - robot_radius
-            for centre, radius in (
-                (obstacle["position_at"](0.0), obstacle["radius"])
-                for obstacle in scenario["obstacles"]
-            )
-            for start, end in zip(path[:-1], path[1:])
-        ),
-        default=float("inf"),
-    )
+    minimum_clearance = float("inf")
+    for obstacle in scenario["obstacles"]:
+        centre = np.asarray(obstacle["position_at"](0.0), dtype=float)
+        if centre.shape != (2,) or not np.isfinite(centre).all():
+            raise ValueError("Obstacle position must be a finite 2D point.")
+        radius = obstacle["radius"]
+        if not np.isfinite(radius) or radius <= 0:
+            raise ValueError("Obstacle radius must be finite and positive.")
+
+        for start, end in zip(path[:-1], path[1:]):
+            clearance = point_to_segment_distance(centre, start, end) - radius - robot_radius
+            if not np.isfinite(clearance):
+                raise ValueError("Obstacle clearance must be finite.")
+            minimum_clearance = min(minimum_clearance, clearance)
     obstacle_violation = max(0.0, safety_margin - minimum_clearance)
 
     # The inset rectangle is convex, so checking all vertices covers every segment.
@@ -54,9 +62,10 @@ def validate_path(scenario, path, *, tolerance=1e-9):
         0.0, float(np.max(margin - path)), float(np.max(path - upper_bound))
     )
     return {
-        "feasible": max(obstacle_violation, boundary_violation) <= tolerance,
+        "feasible": max(obstacle_violation, boundary_violation, endpoint_error) <= tolerance,
         "minimum_clearance": minimum_clearance,
         "max_obstacle_violation": obstacle_violation,
         "max_boundary_violation": boundary_violation,
+        "max_endpoint_error": endpoint_error,
         "tolerance": tolerance,
     }

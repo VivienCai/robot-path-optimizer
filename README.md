@@ -28,7 +28,9 @@ print(validate_path(scenario, straight_line_path(scenario)))
 ```
 
 The validator checks each segment against every obstacle and checks the map
-bounds for all waypoints, including the fixed endpoints. It uses an absolute
-feasibility tolerance of `1e-9` by default and includes it in the report.
+bounds for all waypoints. It also checks that the path begins and ends at the
+scenario's fixed endpoints and reports the maximum coordinate error as
+`max_endpoint_error`. All checks use an absolute feasibility tolerance of
+`1e-9` by default, which is included in the report.
 For obstacle penalties, call
 `geometry.point_to_segment_distance(obstacle_centre, segment_start, segment_end)`.

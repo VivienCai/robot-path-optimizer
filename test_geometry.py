@@ -53,10 +53,52 @@ class StaticPathTests(unittest.TestCase):
         self.assertAlmostEqual(report["max_boundary_violation"], 0.2)
 
     def test_boundary_tolerance_includes_fixed_endpoints(self):
+        self.scenario["goal"][0] = 9.7 + 5e-10
         path = initial_path(self.scenario)
-        path[-1, 0] = 9.7 + 5e-10
         self.assertTrue(validate_path(self.scenario, path)["feasible"])
         self.assertFalse(validate_path(self.scenario, path, tolerance=0.0)["feasible"])
+
+    def test_wrong_fixed_endpoint(self):
+        for index in (0, -1):
+            with self.subTest(index=index):
+                path = initial_path(self.scenario)
+                path[index, 1] += 0.5
+                report = validate_path(self.scenario, path)
+                self.assertFalse(report["feasible"])
+                self.assertAlmostEqual(report["max_endpoint_error"], 0.5)
+
+    def test_endpoint_tolerance_is_absolute(self):
+        path = initial_path(self.scenario)
+        path[-1, 0] += 5e-10
+        self.assertTrue(validate_path(self.scenario, path)["feasible"])
+        self.assertFalse(validate_path(self.scenario, path, tolerance=0.0)["feasible"])
+        path[-1, 0] += 1e-8
+        self.assertFalse(validate_path(self.scenario, path)["feasible"])
+
+    def test_invalid_obstacle_geometry_is_rejected(self):
+        obstacle = self.scenario["obstacles"][0]
+        path = initial_path(self.scenario)
+        for centre in ([np.nan, np.nan], [np.inf, 5], [5], [[5, 5]]):
+            with self.subTest(centre=centre):
+                obstacle["position_at"] = lambda _time: centre
+                with self.assertRaisesRegex(ValueError, "Obstacle position"):
+                    validate_path(self.scenario, path)
+        obstacle["position_at"] = lambda _time: [5, 5]
+        obstacle["radius"] = np.inf
+        with self.assertRaisesRegex(ValueError, "Obstacle radius"):
+            validate_path(self.scenario, path)
+
+    def test_nonfinite_computed_clearance_is_rejected(self):
+        self.scenario["obstacles"][0]["position_at"] = lambda _time: [1e200, 5]
+        with self.assertRaisesRegex(ValueError, "Obstacle clearance"):
+            validate_path(self.scenario, initial_path(self.scenario))
+
+    def test_no_obstacles_preserves_infinite_clearance(self):
+        self.scenario["obstacles"].clear()
+        report = validate_path(self.scenario, straight_line_path(self.scenario))
+        self.assertTrue(report["feasible"])
+        self.assertEqual(report["minimum_clearance"], float("inf"))
+        self.assertEqual(report["max_obstacle_violation"], 0.0)
 
 
 if __name__ == "__main__":
