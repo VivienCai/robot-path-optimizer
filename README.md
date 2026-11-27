@@ -24,4 +24,6 @@ optimize(objective, x0, settings) -> result
 
 ## Visualization
 
-`visualization.py` provides `plot_path(scenario, path, initial_path=...)` for the map and path comparison, and `plot_objective_history(...)` for objective value by iteration. Run `python visualization.py` to create example plots under `figures/`. The included paths and objective history are clearly labeled illustrative dummy data; replace them with validated optimizer results before reporting findings.
+Install the plotting dependencies with `python -m pip install -r requirements.txt`.
+
+`visualization.py` provides `plot_path(scenario, path, initial_path=...)` for the map and path comparison, and `plot_objective_history(...)` for objective value by iteration. Run `python visualization.py` to create example plots under `figures/`. The included paths and objective history are illustrative dummy data for a plotting smoke test; replace them with validated optimizer results before reporting findings.
