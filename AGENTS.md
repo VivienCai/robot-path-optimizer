@@ -358,4 +358,3 @@ Keep plotting outside the timed optimization section.
 - Keep generated results under `results/` and figures under `figures/`.
 - Keep installation and run instructions in `README.md`.
 - Keep dependencies in `requirements.txt`.
-- Document AI assistance accurately in the final submission.
